@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>AI Habit Tracker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <div class="container">
+        <h1>AI Habit Tracker</h1>
+
+        {% if message %}
+        <div class="milestone-banner">
+            {{ message }}
+        </div>
+        {% endif %}
+
+        <form action="/add" method="POST" style="margin-bottom: 20px;">
+            <input type="text" name="habit_name" placeholder="New habit (e.g. Journal)" required>
+            <button type="submit">Add Habit</button>
+        </form>
+
+        {% for habit in habits %}
+        <div class="card">
+            <strong>{{ habit.name }}</strong><br>
+            🔥 Streak: {{ habit.streak }} |
+            🏆 Longest: {{ habit.longest_streak }}<br>
+
+            {% if habit.last_done == today %}
+            <div class="done-badge">
+                ✅ Done today
+            </div>
+            {% else %}
+            <form action="/done/{{ habit.name }}" method="POST" style="margin-top: 10px;">
+                <label style="font-size: 0.85rem; color: #555;">
+                    Effort today:
+                    <strong class="effort-value">5</strong>/10
+                </label>
+
+                <input type="range" name="effort" min="1" max="10" value="5"
+                    oninput="this.previousElementSibling.querySelector('.effort-value').innerText = this.value"
+                    style="width: 100%; margin: 6px 0;">
+
+                <button type="submit">Mark Done</button>
+            </form>
+            {% endif %}
+
+            <form action="/delete/{{ habit.name }}" method="POST" style="margin-top: 8px;"
+                onsubmit="return confirm('Are you sure you want to delete this habit? This cannot be undone.')">
+                <button type="submit" style="background:#ef4444;">Delete</button>
+            </form>
+
+        </div>
+        {% endfor %}
+    </div>
+</body>
+
+</html>
