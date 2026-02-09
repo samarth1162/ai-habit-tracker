@@ -1,10 +1,9 @@
-[
-    {
-        "name": "Learn",
-        "streak": 0,
-        "longest_streak": 0,
-        "last_done": null,
-        "effort_log": [],
-        "last_milestone": 0
-    }
-]
+{
+    "id": "learn_develop",
+    "name": "Learn/Develop",
+    "streak": 0,
+    "longest_streak": 0,
+    "last_done": null,
+    "effort_log": [],
+    "last_milestone": 0
+}

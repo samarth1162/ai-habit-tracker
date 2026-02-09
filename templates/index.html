@@ -10,11 +10,7 @@
     <div class="container">
         <h1>AI Habit Tracker</h1>
 
-        {% if message %}
-        <div class="milestone-banner">
-            {{ message }}
-        </div>
-        {% endif %}
+
 
         {% if weekly_summary %}
         <div class="weekly-summary">
@@ -46,7 +42,7 @@
                 ✅ Done today
             </div>
             {% else %}
-            <form action="/done/{{ habit.name | urlencode }}" method="POST" style="margin-top: 10px;">
+            <form action="/done/{{ habit.id }}" method="POST" style="margin-top: 10px;">
                 <label style="font-size: 0.85rem; color: #555;">
                     Effort today:
                     <strong class="effort-value">5</strong>/10
@@ -60,7 +56,7 @@
             </form>
             {% endif %}
 
-            <form action="/delete/{{ habit.name | urlencode }}" method="POST" style="margin-top: 8px;"
+            <form action="/delete/{{ habit.id }}" method="POST" style="margin-top: 8px;"
                 onsubmit="return confirm('Are you sure you want to delete this habit? This cannot be undone.')">
                 <button type="submit" style="background:#ef4444;">Delete</button>
             </form>

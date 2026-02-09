@@ -90,15 +90,15 @@ def add_habit():
     return redirect("/")
 
 # ---------------- MARK DONE ----------------
-@app.route("/done/<path:habit_name>", methods=["POST"])
-def mark_done(habit_name):
-    habit_name = unquote(habit_name)
-
+@app.route("/done/<habit_id>", methods=["POST"])
+def mark_done(habit_id):
     today = date.today()
     effort = int(request.form.get("effort", 5))
 
     for habit in habits:
-        if habit["name"].lower() == habit_name.lower():
+        if habit["id"] == habit_id:
+            ...
+
 
             # Streak logic
             if habit["last_done"]:
@@ -145,14 +145,13 @@ def mark_done(habit_name):
     return redirect("/")
 
 # ---------------- DELETE HABIT ----------------
-@app.route("/delete/<path:habit_name>", methods=["POST"])
-def delete_habit(habit_name):
-    habit_name = unquote(habit_name)
-
+@app.route("/delete/<habit_id>", methods=["POST"])
+def delete_habit(habit_id):
     global habits
-    habits = [h for h in habits if h["name"].lower() != habit_name.lower()]
+    habits = [h for h in habits if h["id"] != habit_id]
     save_data()
     return redirect("/")
+
 
 # ---------------- SAVE ----------------
 def save_data():
