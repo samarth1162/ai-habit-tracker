@@ -1,6 +1,7 @@
 from flask import Flask, render_template, redirect, request
 from datetime import date, timedelta
 import json
+from urllib.parse import quote, unquote
 
 app = Flask(__name__)
 
@@ -28,17 +29,46 @@ TASK_MESSAGES = {
     }
 }
 
+def get_weekly_summary(habits):
+    today = date.today()
+    start = today - timedelta(days=6)
+
+    completed_days = 0
+    total_effort = 0
+    effort_entries = 0
+
+    for habit in habits:
+        for entry in habit["effort_log"]:
+            entry_date = date.fromisoformat(entry["date"])
+            if start <= entry_date <= today:
+                completed_days += 1
+                total_effort += entry["effort"]
+                effort_entries += 1
+
+    if completed_days == 0:
+        return None
+
+    avg_effort = round(total_effort / effort_entries, 1)
+
+    return (
+        f"This week: you completed {completed_days} habit check-ins. "
+        f"Average effort was {avg_effort}/10."
+    )
+
+
 # ---------------- HOME ----------------
 @app.route("/")
 def home():
     today = date.today().isoformat()
     message = app.config.pop("STREAK_MESSAGE", None)
+    weekly_summary = get_weekly_summary(habits)
 
     return render_template(
         "index.html",
         habits=habits,
         today=today,
-        message=message
+        message=message,
+        weekly_summary=weekly_summary
     )
 
 # ---------------- ADD HABIT ----------------
@@ -60,8 +90,10 @@ def add_habit():
     return redirect("/")
 
 # ---------------- MARK DONE ----------------
-@app.route("/done/<habit_name>", methods=["POST"])
+@app.route("/done/<path:habit_name>", methods=["POST"])
 def mark_done(habit_name):
+    habit_name = unquote(habit_name)
+
     today = date.today()
     effort = int(request.form.get("effort", 5))
 
@@ -113,8 +145,10 @@ def mark_done(habit_name):
     return redirect("/")
 
 # ---------------- DELETE HABIT ----------------
-@app.route("/delete/<habit_name>", methods=["POST"])
+@app.route("/delete/<path:habit_name>", methods=["POST"])
 def delete_habit(habit_name):
+    habit_name = unquote(habit_name)
+
     global habits
     habits = [h for h in habits if h["name"].lower() != habit_name.lower()]
     save_data()
