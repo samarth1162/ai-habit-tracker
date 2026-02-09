@@ -1,1 +1,10 @@
-[]
+[
+    {
+        "name": "Learn",
+        "streak": 0,
+        "longest_streak": 0,
+        "last_done": null,
+        "effort_log": [],
+        "last_milestone": 0
+    }
+]
