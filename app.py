@@ -1,27 +1,25 @@
-from flask import Flask, render_template, redirect, request
+from flask import Flask, render_template, redirect, request, flash
 from datetime import date, timedelta
 import json
-from urllib.parse import quote, unquote
+import os
 
 app = Flask(__name__)
+app.secret_key = "dev-secret-key"
 
-# ---------------- LOAD DATA ----------------
-with open("habits.json", "r") as f:
-    habits = json.load(f)
+DATA_FILE = "habits.json"
 
-# ---------------- MESSAGE TEMPLATES ----------------
 TASK_MESSAGES = {
     "gym": {
-        1: "Good start. Showing up matters more than intensity.",
-        7: "Seven days in. Your body is adapting to consistency."
+        1: "You started Gym. Showing up matters more than intensity.",
+        7: "Seven days of Gym. Your body is adapting to consistency."
     },
     "read": {
-        1: "One reading session done. Knowledge compounds quietly.",
-        7: "Seven days of reading. Focus is becoming a habit."
+        1: "You started Reading. Knowledge compounds quietly.",
+        7: "Seven days of Reading. Focus is becoming a habit."
     },
     "walk": {
-        1: "You moved today. That is always a win.",
-        7: "Seven days of movement. This supports everything else you do."
+        1: "You started Walking. Movement always counts.",
+        7: "Seven days of Walking. This supports everything else you do."
     },
     "default": {
         1: "Day one complete. You started.",
@@ -29,85 +27,55 @@ TASK_MESSAGES = {
     }
 }
 
-def get_weekly_summary(habits):
-    today = date.today()
-    start = today - timedelta(days=6)
+def make_id(name):
+    return name.lower().strip().replace(" ", "_").replace("/", "_")
 
-    completed_days = 0
-    total_effort = 0
-    effort_entries = 0
+def load_data():
+    if not os.path.exists(DATA_FILE):
+        return []
+    with open(DATA_FILE, "r") as f:
+        return json.load(f)
 
-    for habit in habits:
-        for entry in habit["effort_log"]:
-            entry_date = date.fromisoformat(entry["date"])
-            if start <= entry_date <= today:
-                completed_days += 1
-                total_effort += entry["effort"]
-                effort_entries += 1
+def save_data(habits):
+    with open(DATA_FILE, "w") as f:
+        json.dump(habits, f, indent=2)
 
-    if completed_days == 0:
-        return None
-
-    avg_effort = round(total_effort / effort_entries, 1)
-
-    return (
-        f"This week: you completed {completed_days} habit check-ins. "
-        f"Average effort was {avg_effort}/10."
-    )
-
-
-# ---------------- HOME ----------------
 @app.route("/")
 def home():
+    habits = load_data()
     today = date.today().isoformat()
-    message = app.config.pop("STREAK_MESSAGE", None)
-    weekly_summary = get_weekly_summary(habits)
+    return render_template("index.html", habits=habits, today=today)
 
-    return render_template(
-        "index.html",
-        habits=habits,
-        today=today,
-        message=message,
-        weekly_summary=weekly_summary
-    )
-
-# ---------------- ADD HABIT ----------------
 @app.route("/add", methods=["POST"])
 def add_habit():
+    habits = load_data()
     name = request.form.get("habit_name", "").strip()
 
     if name:
         habits.append({
+            "id": make_id(name),
             "name": name,
             "streak": 0,
             "longest_streak": 0,
-            "last_done": None,
-            "effort_log": [],
-            "last_milestone": 0
+            "last_done": None
         })
-        save_data()
+        save_data(habits)
 
     return redirect("/")
 
-# ---------------- MARK DONE ----------------
 @app.route("/done/<habit_id>", methods=["POST"])
 def mark_done(habit_id):
+    habits = load_data()
     today = date.today()
-    effort = int(request.form.get("effort", 5))
 
     for habit in habits:
         if habit["id"] == habit_id:
-            ...
 
-
-            # Streak logic
             if habit["last_done"]:
-                last_done = date.fromisoformat(habit["last_done"])
-
-                if last_done == today:
+                last = date.fromisoformat(habit["last_done"])
+                if last == today:
                     return redirect("/")
-
-                if last_done == today - timedelta(days=1):
+                if last == today - timedelta(days=1):
                     habit["streak"] += 1
                 else:
                     habit["streak"] = 1
@@ -115,53 +83,28 @@ def mark_done(habit_id):
                 habit["streak"] = 1
 
             habit["last_done"] = today.isoformat()
+            habit["longest_streak"] = max(habit["longest_streak"], habit["streak"])
 
-            if habit["streak"] > habit["longest_streak"]:
-                habit["longest_streak"] = habit["streak"]
+            messages = TASK_MESSAGES.get(
+                habit["name"].lower(),
+                TASK_MESSAGES["default"]
+            )
 
-            # Effort logging
-            habit["effort_log"].append({
-                "date": today.isoformat(),
-                "effort": effort
-            })
+            if habit["streak"] in messages:
+                flash(messages[habit["streak"]], "streak")
 
-            # Streak messages (1-day and 7-day)
-            streak = habit["streak"]
-            last_milestone = habit.get("last_milestone", 0)
 
-            task_key = habit["name"].lower()
-            messages = TASK_MESSAGES.get(task_key, TASK_MESSAGES["default"])
-
-            if streak in (1, 7) and last_milestone < streak:
-                app.config["STREAK_MESSAGE"] = messages.get(
-                    streak,
-                    TASK_MESSAGES["default"][streak]
-                )
-                habit["last_milestone"] = streak
-
-            save_data()
-            return redirect("/")
+            save_data(habits)
+            break
 
     return redirect("/")
 
-# ---------------- DELETE HABIT ----------------
 @app.route("/delete/<habit_id>", methods=["POST"])
 def delete_habit(habit_id):
-    global habits
+    habits = load_data()
     habits = [h for h in habits if h["id"] != habit_id]
-    save_data()
+    save_data(habits)
     return redirect("/")
 
-
-# ---------------- SAVE ----------------
-def save_data():
-    with open("habits.json", "w") as f:
-        json.dump(habits, f, indent=2)
-
-# ---------------- RUN ----------------
-import os
-
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
-    app.run(host="0.0.0.0", port=port)
-
+    app.run(debug=True, port=8000)
